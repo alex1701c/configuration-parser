@@ -12,12 +12,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # Older versions of gcc don't link automatically to stdc++fs.
     if(NOT APPLE)
         set(EXTRA_SYSTEM_LIBRARIES stdc++fs)
     endif()
 endif()
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+set(CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/ConfigurationParser")
 
 find_package(Boost COMPONENTS filesystem system REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core)
@@ -51,12 +56,35 @@ target_link_libraries(parser Boost::filesystem Qt5::Core)
 
 add_executable(confgen ${configurationGeneration_SRCS})
 target_link_libraries(confgen parser Qt5::Core ${EXTRA_SYSTEM_LIBRARIES})
+install(TARGETS confgen EXPORT ConfigurationParserTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/ConfigurationParser)
 
 add_executable(kcfggen ${DUMP_KCONFIG_SRCS})
 target_link_libraries(kcfggen parser Qt5::Core ${EXTRA_SYSTEM_LIBRARIES})
+install(TARGETS kcfggen EXPORT ConfigurationParserTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/ConfigurationParser)
 
 add_executable(qtobjgen ${QObjectGeneration_SRCS})
 target_link_libraries(qtobjgen parser Qt5::Core ${EXTRA_SYSTEM_LIBRARIES})
+install(TARGETS qtobjgen EXPORT ConfigurationParserTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/ConfigurationParser)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/ConfigurationParserConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ConfigurationParserConfig.cmake"
+    INSTALL_DESTINATION "${CMAKECONFIG_INSTALL_DIR}")
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/ConfigurationParserConfigVersion.cmake"
+    VERSION "0.0.1"
+    COMPATIBILITY ExactVersion
+)
+
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/ConfigurationParserConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/ConfigurationParserConfigVersion.cmake"
+        "cmake/ConfigurationCompiler.cmake"
+        DESTINATION "${CMAKECONFIG_INSTALL_DIR}")
+install(EXPORT ConfigurationParserTargets
+        DESTINATION "${CMAKECONFIG_INSTALL_DIR}"
+        FILE ConfigurationParserTargets.cmake
+        NAMESPACE ConfigurationParser:: )
 
 enable_testing()
 add_subdirectory(test)
